@@ -2747,6 +2747,33 @@ const OpenListConfigComponent = ({
     fetchVideos(true); // 强制从数据库重新读取，不使用缓存
   };
 
+  const handleCheckConnectivity = async () => {
+    await withLoading('checkOpenList', async () => {
+      try {
+        const response = await fetch('/api/openlist/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url,
+            username,
+            password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showSuccess('连接成功', showAlert);
+        } else {
+          throw new Error(data.error || '连接失败');
+        }
+      } catch (error) {
+        showError(error instanceof Error ? error.message : '连接失败', showAlert);
+        throw error;
+      }
+    });
+  };
+
   const handleDeleteVideo = async (folder: string, title: string) => {
     // 显示确认对话框，直接在 onConfirm 中执行删除操作
     showAlert({
@@ -2916,6 +2943,13 @@ const OpenListConfigComponent = ({
         </div>
 
         <div className='flex gap-3'>
+          <button
+            onClick={handleCheckConnectivity}
+            disabled={!enabled || !url || !username || !password || isLoading('checkOpenList')}
+            className={buttonStyles.primary}
+          >
+            {isLoading('checkOpenList') ? '检查中...' : '检查连通性'}
+          </button>
           <button
             onClick={handleSave}
             disabled={isLoading('saveOpenList')}

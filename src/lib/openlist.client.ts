@@ -279,4 +279,40 @@ export class OpenListClient {
       throw new Error(`OpenList 删除失败: ${response.status}`);
     }
   }
+
+  // 检查连通性
+  async checkConnectivity(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.fetchWithRetry(`${this.baseURL}/api/me`, {
+        method: 'GET',
+        headers: await this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return {
+          success: false,
+          message: `HTTP 状态码错误: ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+
+      if (data.code !== 200) {
+        return {
+          success: false,
+          message: `响应码错误: ${data.code}`,
+        };
+      }
+
+      return {
+        success: true,
+        message: '连接成功',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : '连接失败',
+      };
+    }
+  }
 }
