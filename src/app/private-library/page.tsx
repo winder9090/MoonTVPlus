@@ -4,6 +4,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { Film } from 'lucide-react';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import PageLayout from '@/components/PageLayout';
@@ -447,13 +448,22 @@ export default function PrivateLibraryPage() {
   return (
     <PageLayout activePath='/private-library'>
       <div className='container mx-auto px-4 py-6'>
-        <div className='mb-6'>
-          <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-            私人影库
-          </h1>
-          <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-            观看自我收藏的高清视频吧
-          </p>
+        <div className='mb-6 flex justify-between items-start'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
+              私人影库
+            </h1>
+            <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+              观看自我收藏的高清视频吧
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/movie-request')}
+            className='flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors'
+          >
+            <Film size={20} />
+            <span>求片</span>
+          </button>
         </div>
 
         {/* 第一级：源类型选择（OpenList / Emby / 小雅） */}

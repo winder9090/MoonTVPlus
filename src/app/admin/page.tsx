@@ -8725,6 +8725,177 @@ const XiaoyaConfigComponent = ({
   );
 };
 
+// 求片列表组件
+const MovieRequestsComponent = ({ config, refreshConfig }: { config: AdminConfig | null; refreshConfig: () => void }) => {
+  const { alertModal, showAlert, hideAlert } = useAlertModal();
+  const { isLoading, withLoading } = useLoadingState();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [filter, setFilter] = useState<'pending' | 'fulfilled'>('pending');
+  const [pendingCount, setPendingCount] = useState(0);
+  const [fulfilledCount, setFulfilledCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadRequests();
+    loadCounts();
+  }, [filter]);
+
+  const loadCounts = async () => {
+    try {
+      const response = await fetch('/api/movie-requests');
+      const data = await response.json();
+      const allRequests = data.requests || [];
+      setPendingCount(allRequests.filter((r: any) => r.status === 'pending').length);
+      setFulfilledCount(allRequests.filter((r: any) => r.status === 'fulfilled').length);
+    } catch (error) {
+      console.error('加载求片数量失败:', error);
+    }
+  };
+
+  const loadRequests = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/movie-requests?status=${filter}&detail=true`);
+      const data = await response.json();
+      setRequests(data.requests || []);
+    } catch (error) {
+      console.error('加载求片列表失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFulfill = async (id: string) => {
+    await withLoading(`fulfill_${id}`, async () => {
+      try {
+        const response = await fetch(`/api/movie-requests/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'fulfilled' }),
+        });
+        if (!response.ok) throw new Error('操作失败');
+        showSuccess('已标记为已上架', showAlert);
+        await loadRequests();
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '操作失败', showAlert);
+      }
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    await withLoading(`delete_${id}`, async () => {
+      try {
+        const response = await fetch(`/api/movie-requests/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('删除失败');
+        showSuccess('删除成功', showAlert);
+        await loadRequests();
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '删除失败', showAlert);
+      }
+    });
+  };
+
+  return (
+    <div className='space-y-4'>
+      <div className='flex gap-2 mb-4'>
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-4 py-2 rounded-lg ${
+            filter === 'pending'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          待处理 ({pendingCount})
+        </button>
+        <button
+          onClick={() => setFilter('fulfilled')}
+          className={`px-4 py-2 rounded-lg ${
+            filter === 'fulfilled'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          已上架 ({fulfilledCount})
+        </button>
+      </div>
+
+      {loading ? (
+        <div className='flex justify-center py-8'>
+          <div className='w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin' />
+        </div>
+      ) : requests.length === 0 ? (
+        <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
+          暂无求片
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {requests.map((req) => (
+            <div
+              key={req.id}
+              className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg'
+            >
+              <div className='flex gap-4'>
+                {req.poster && (
+                  <img
+                    src={req.poster}
+                    alt={req.title}
+                    className='w-16 h-24 object-cover rounded'
+                  />
+                )}
+                <div className='flex-1'>
+                  <h3 className='font-medium text-gray-900 dark:text-gray-100'>
+                    {req.title} {req.year && `(${req.year})`}
+                  </h3>
+                  <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                    求片人数: {req.requestCount} 人
+                  </p>
+                  <p className='text-xs text-gray-500 dark:text-gray-500 mt-1'>
+                    {new Date(req.createdAt).toLocaleString('zh-CN')}
+                  </p>
+                  {req.requestedBy && (
+                    <p className='text-xs text-gray-500 dark:text-gray-500 mt-1'>
+                      求片用户: {req.requestedBy.join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className='flex flex-col gap-2'>
+                  {filter === 'pending' && (
+                    <button
+                      onClick={() => handleFulfill(req.id)}
+                      disabled={isLoading(`fulfill_${req.id}`)}
+                      className={buttonStyles.successSmall}
+                    >
+                      {isLoading(`fulfill_${req.id}`) ? '处理中...' : '标记已上架'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(req.id)}
+                    disabled={isLoading(`delete_${req.id}`)}
+                    className={buttonStyles.dangerSmall}
+                  >
+                    {isLoading(`delete_${req.id}`) ? '删除中...' : '删除'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={hideAlert}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+        timer={alertModal.timer}
+        showConfirm={alertModal.showConfirm}
+      />
+    </div>
+  );
+};
+
 // AI配置组件
 const AIConfigComponent = ({
   config,
@@ -10237,6 +10408,18 @@ function AdminPageClient() {
                   onToggle={() => toggleTab('xiaoyaConfig')}
                 >
                   <XiaoyaConfigComponent config={config} refreshConfig={fetchConfig} />
+                </CollapsibleTab>
+
+                {/* 求片管理子标签 */}
+                <CollapsibleTab
+                  title='求片管理'
+                  icon={
+                    <Video size={20} className='text-gray-600 dark:text-gray-400' />
+                  }
+                  isExpanded={expandedTabs.movieRequests}
+                  onToggle={() => toggleTab('movieRequests')}
+                >
+                  <MovieRequestsComponent />
                 </CollapsibleTab>
               </div>
             </CollapsibleTab>

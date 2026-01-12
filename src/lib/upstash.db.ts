@@ -1260,6 +1260,54 @@ export class UpstashRedisStorage implements IStorage {
       this.client.set(this.lastFavoriteCheckKey(userName), timestamp)
     );
   }
+
+  // ---------- 求片相关 ----------
+  private movieRequestsKey() {
+    return 'movie_requests:all';
+  }
+
+  private userMovieRequestsKey(userName: string) {
+    return `u:${userName}:mr`;
+  }
+
+  async getAllMovieRequests(): Promise<import('./types').MovieRequest[]> {
+    const data = await withRetry(() => this.client.hgetall(this.movieRequestsKey()));
+    if (!data) return [];
+    return Object.values(data) as import('./types').MovieRequest[];
+  }
+
+  async getMovieRequest(requestId: string): Promise<import('./types').MovieRequest | null> {
+    const val = await withRetry(() => this.client.hget(this.movieRequestsKey(), requestId));
+    return val ? (val as import('./types').MovieRequest) : null;
+  }
+
+  async createMovieRequest(request: import('./types').MovieRequest): Promise<void> {
+    await withRetry(() => this.client.hset(this.movieRequestsKey(), { [request.id]: request }));
+  }
+
+  async updateMovieRequest(requestId: string, updates: Partial<import('./types').MovieRequest>): Promise<void> {
+    const existing = await this.getMovieRequest(requestId);
+    if (!existing) throw new Error('Movie request not found');
+    const updated = { ...existing, ...updates };
+    await withRetry(() => this.client.hset(this.movieRequestsKey(), { [requestId]: updated }));
+  }
+
+  async deleteMovieRequest(requestId: string): Promise<void> {
+    await withRetry(() => this.client.hdel(this.movieRequestsKey(), requestId));
+  }
+
+  async getUserMovieRequests(userName: string): Promise<string[]> {
+    const val = await withRetry(() => this.client.smembers(this.userMovieRequestsKey(userName)));
+    return val ? ensureStringArray(val) : [];
+  }
+
+  async addUserMovieRequest(userName: string, requestId: string): Promise<void> {
+    await withRetry(() => this.client.sadd(this.userMovieRequestsKey(userName), requestId));
+  }
+
+  async removeUserMovieRequest(userName: string, requestId: string): Promise<void> {
+    await withRetry(() => this.client.srem(this.userMovieRequestsKey(userName), requestId));
+  }
 }
 
 // 单例 Upstash Redis 客户端

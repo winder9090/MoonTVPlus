@@ -117,6 +117,16 @@ export interface IStorage {
   // 收藏更新检查相关
   getLastFavoriteCheckTime(userName: string): Promise<number>;
   setLastFavoriteCheckTime(userName: string, timestamp: number): Promise<void>;
+
+  // 求片相关
+  getAllMovieRequests(): Promise<MovieRequest[]>;
+  getMovieRequest(requestId: string): Promise<MovieRequest | null>;
+  createMovieRequest(request: MovieRequest): Promise<void>;
+  updateMovieRequest(requestId: string, updates: Partial<MovieRequest>): Promise<void>;
+  deleteMovieRequest(requestId: string): Promise<void>;
+  getUserMovieRequests(userName: string): Promise<string[]>;
+  addUserMovieRequest(userName: string, requestId: string): Promise<void>;
+  removeUserMovieRequest(userName: string, requestId: string): Promise<void>;
 }
 
 // 搜索结果数据结构
@@ -195,7 +205,9 @@ export interface EpisodeFilterConfig {
 export type NotificationType =
   | 'favorite_update' // 收藏更新
   | 'system' // 系统通知
-  | 'announcement'; // 公告
+  | 'announcement' // 公告
+  | 'movie_request' // 新求片通知（给管理员）
+  | 'request_fulfilled'; // 求片已上架通知（给求片用户）
 
 // 通知数据结构
 export interface Notification {
@@ -218,4 +230,24 @@ export interface FavoriteUpdateCheck {
     old_episodes: number;
     new_episodes: number;
   }>;
+}
+
+// 求片请求数据结构
+export interface MovieRequest {
+  id: string;
+  tmdbId?: number;
+  title: string;
+  year?: string;
+  mediaType: 'movie' | 'tv';
+  season?: number; // 季度（仅剧集）
+  poster?: string;
+  overview?: string;
+  requestedBy: string[];
+  requestCount: number;
+  status: 'pending' | 'fulfilled';
+  createdAt: number;
+  updatedAt: number;
+  fulfilledAt?: number;
+  fulfilledSource?: string;
+  fulfilledId?: string;
 }
