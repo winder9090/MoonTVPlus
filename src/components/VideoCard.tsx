@@ -382,11 +382,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
   // 长按操作
   const handleLongPress = useCallback(() => {
-    // 即将上映的电影不显示操作菜单
-    if (isUpcoming) {
-      return;
-    }
-
     if (!showMobileActions) { // 防止重复触发
       // 立即显示菜单，避免等待数据加载导致动画卡顿
       setShowMobileActions(true);
@@ -396,7 +391,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         checkSearchFavoriteStatus();
       }
     }
-  }, [isUpcoming, showMobileActions, from, isAggregate, actualSource, actualId, searchFavorited, checkSearchFavoriteStatus]);
+  }, [showMobileActions, from, isAggregate, actualSource, actualId, searchFavorited, checkSearchFavoriteStatus]);
 
   // 长按手势hook
   const longPressProps = useLongPress({
@@ -681,11 +676,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           // 阻止默认右键菜单
           e.preventDefault();
           e.stopPropagation();
-
-          // 即将上映的电影不显示操作菜单
-          if (isUpcoming) {
-            return false;
-          }
 
           // 右键弹出操作菜单
           setShowMobileActions(true);
